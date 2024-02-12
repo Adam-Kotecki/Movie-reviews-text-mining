@@ -27,21 +27,19 @@ except:
 # Find all review elements
 review_elements = driver.find_element(By.CLASS_NAME, 'reviews-container')
 
-# Extract review text and state
 data = []
-scores = []
-reviews = []
 
 # extracting lists of reviews and states
 reviews_text = review_elements.find_elements(By.CLASS_NAME, 'review-text')
 reviews_state = review_elements.find_elements(By.CSS_SELECTOR, 'score-icon-critic-deprecated')
+reviews_date = review_elements.find_elements(By.XPATH, '//*[@id="reviews"]/div[1]/div[*]/div[2]/p[2]/span')
 
-t = (reviews_text, reviews_state)
+t = (reviews_text, reviews_state, reviews_date)
 
-for rev, st in zip(*t):
-    data.append((rev.text, st.get_attribute("state")))
+for rev, st, dt in zip(*t):
+    data.append((rev.text, st.get_attribute("state"), dt.text))
 
-df = pd.DataFrame(data, columns = ['Review', 'State'])
+df = pd.DataFrame(data, columns = ['Review', 'State', 'Date'])
 
 print(df)
 
