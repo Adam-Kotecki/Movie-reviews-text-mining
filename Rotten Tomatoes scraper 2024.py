@@ -40,10 +40,11 @@ for rev, st, dt in zip(*t):
     data.append((rev.text, st.get_attribute("state"), dt.text))
 
 df = pd.DataFrame(data, columns = ['Review', 'State', 'Date'])
+df['Date'] = pd.to_datetime(df['Date'])
+df['Year'] = df['Date'].dt.year
 
-print(df)
+df.to_excel("Movie reviews.xlsx")
 
 # Close the browser = web driver
 driver.quit()
 
-print("completed") 
