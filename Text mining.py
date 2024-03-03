@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.feature_extraction.text import CountVectorizer
 from wordcloud import WordCloud, STOPWORDS
+from collections import Counter 
 
 df = pd.read_excel('Movie reviews.xlsx')
 
@@ -32,17 +33,17 @@ def lemmatize_text(text):
 df['Lemmas'] = df['Review'].apply(lambda x : lemmatize_text(x))
 
 # hue is splitting bar into several bar categories per selected column
-ax = sns.countplot(x='Year', hue = "State", data = df, palette=['#10c456',"#fb350d"])
+ax = sns.countplot(x='Year', hue = "State", data = df, palette=['#10c456',"#fb350d"]).set_title("No. of positive and negative reviews per year")
 
 rotten_before_nom = len( df[(df["State"] == "rotten") & (df["Date"] < '2024-01-23')] )
 rotten_after_nom = len( df[(df["State"] == "rotten") & (df["Date"] >= '2024-01-23')] )
 
-print("Count of negative reviews published before oscar nomination")
+print("Count of negative reviews published before oscar nomination:")
 print(rotten_before_nom)
-print("Count of negative reviews published after oscar nomination")
+print("Count of negative reviews published after oscar nomination:")
 print(rotten_after_nom)
 
-
+# WC for unigrams
 for rating in ["rotten", "fresh"]:
     curr_lemmatized_tokens = list(df[df['State'] == rating]['Lemmas'])
     # Convert a collection of text documents to a matrix of token counts:
@@ -70,77 +71,54 @@ for rating in ["rotten", "fresh"]:
     plt.axis("off")
     plt.show()
 
+# WC for bigrams
+for rating in ["rotten", "fresh"]:
+    curr_lemmatized_tokens = list(df[df['State'] == rating]['Lemmas'])
+    vectorizer = CountVectorizer(ngram_range=(2,2))
+    bag_of_words = vectorizer.fit_transform(df[df['State'] == rating]['Lemmas'].apply(lambda x : ' '.join(x)))
+    sum_words = bag_of_words.sum(axis=0) 
+    words_freq = [(word, sum_words[0, idx]) for word, idx in vectorizer.vocabulary_.items()]
+    words_freq =sorted(words_freq, key = lambda x: x[1], reverse=True)
+    words_dict = dict(words_freq)
+    WC_height = 1000
+    WC_width = 1500
+    WC_max_words = 30
+    wordCloud = WordCloud(max_words = WC_max_words, height = WC_height, width = WC_width, colormap='Oranges')
+    
+    wordCloud.generate_from_frequencies(words_dict)
+    plt.figure(figsize=(20,8))
+    plt.imshow(wordCloud)
+    if rating == "rotten":
+        state = "negative"
+    else:
+        state = "positive"
+    plt.title('Word Cloud of bigrams for ' + str(state) + ' reviews', fontsize = 25)
+    plt.axis("off")
+    plt.show()
 
-'''
-print(len(df[df["State"] == "fresh"]))
+lemmatized_tokens = list(df['Lemmas'])
+vectorizer = CountVectorizer(ngram_range=(1,1))
+bag_of_words = vectorizer.fit_transform(df['Lemmas'].apply(lambda x : ' '.join(x)))
+sum_words = bag_of_words.sum(axis=0) 
+words_freq = [(word, sum_words[0, idx]) for word, idx in vectorizer.vocabulary_.items()]
+sorted_words_freq = sorted(words_freq, key=lambda x: x[1], reverse=True)
+word_freq_counter = Counter({word: freq for word, freq in sorted_words_freq})
+
+most_occur = word_freq_counter.most_common(10) 
+
+words = [x[0] for x in most_occur]
+counts = [x[1] for x in most_occur]
+
+plt.barh(words, counts, color='skyblue')
+plt.title("Most common words")
+plt.gca().invert_yaxis()
+plt.show()
+
+plt.figure()
+plt.hist(df['flesch reading ease'], bins = 10,  color='skyblue')
+plt.xlabel("flesch reading ease")
+plt.ylabel("frequency")
+plt.title("Distribution of flesch reading ease")
+plt.show()
 
 
-labels = []
-# containers are groups of bars
-for container in ax.containers:
-    group_height = 0
-    for bar in container:
-        # getting height of current bar
-        bar_height = bar.get_height()
-        group_height =+ bar_height
-    for bar in container:
-        bar_height = bar.get_height()
-        labels.append(f'{group_height/bar_height*100:0.1f}%')
-        
-            
-    #labels = [f'{h/df.State.count()*100:0.1f}%' if (h := v.get_height()) > 0 else '' for v in c]
-ax.bar_label(container, labels = labels, label_type='edge')
-'''
-'''    
-rotten = df[df["State"] == "rotten"]
-fresh = df[df["State"] == "fresh"]
-
-perc = df['State'].value_counts(ascending=False, normalize=True).values * 100
-percentage = pd.DataFrame({'count': [fresh.shape[0], rotten.shape[0]], '%': perc }, index = ['Fresh', 'Rotten'])
-print(percentage)
-
-
-
-labels = []
-# containers are groups of bars
-for c in ax.containers:
-    # b is single bar, described by width and height
-    group_height = 0
-    for b in enumerate(c):
-        # getting height of current bar
-        h = b[1].get_height()
-        group_height =+ h
-        # checking index of category:
-        if b[0] == 0:
-            labels.append(f'{group_height/df.State["fresh"].count()*100:0.1f}%')
-        else:
-            labels.append(f'{group_height/df.State["rotten"].count()*100:0.1f}%')
-'''
-
-
-
-# Extracting emotions words:
-
-def get_emotion_words(reviews):
-    emotion_words = set()
-    for review in reviews:
-        words = nltk.word_tokenize(review)
-        tagged_words = nltk.pos_tag(words)
-        for word, tag in tagged_words:
-            # checking if tag is adjective:
-            if tag.startswith('JJ'):  # Adjectives
-                synonyms = set()
-                # Synset instances are the groupings of synonymous words that express the same concept
-                for syn in wordnet.synsets(word):
-                    for lemma in syn.lemmas():
-                        synonyms.add(lemma.name())
-                emotion_words.update(synonyms)
-    return emotion_words
-
-pos_reviews = list(df.loc[df['State'] == "fresh", 'Review'])
-neg_reviews = list(df.loc[df['State'] == "rotten", 'Review'])
-
-pos_emotions = get_emotion_words(pos_reviews)
-neg_emotions = get_emotion_words(neg_reviews)
-
-print(pos_emotions)
