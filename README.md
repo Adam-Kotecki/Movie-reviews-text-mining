@@ -14,7 +14,7 @@ Project is created with:
 * nltk
 * dash
 
-** Usage instructions
+## Usage instructions
 1. Install dependencies
 2. Run 'Rotten Tomatoes scraper 2024.py'
 3. Run 'Text_mining.py'
