@@ -14,6 +14,7 @@ import seaborn as sns
 from sklearn.feature_extraction.text import CountVectorizer
 from wordcloud import WordCloud, STOPWORDS
 from collections import Counter 
+from textblob import TextBlob
 
 df = pd.read_excel('Movie reviews.xlsx')
 
@@ -34,14 +35,15 @@ df['Lemmas'] = df['Review'].apply(lambda x : lemmatize_text(x))
 
 # hue is splitting bar into several bar categories per selected column
 ax = sns.countplot(x='Year', hue = "State", data = df, palette=['#10c456',"#fb350d"]).set_title("No. of positive and negative reviews per year")
+plt.savefig("assets/chart1.png")
 
 rotten_before_nom = len( df[(df["State"] == "rotten") & (df["Date"] < '2024-01-23')] )
 rotten_after_nom = len( df[(df["State"] == "rotten") & (df["Date"] >= '2024-01-23')] )
 
-print("Count of negative reviews published before oscar nomination:")
-print(rotten_before_nom)
-print("Count of negative reviews published after oscar nomination:")
-print(rotten_after_nom)
+# print("Count of negative reviews published before oscar nomination:")
+# print(rotten_before_nom)
+# print("Count of negative reviews published after oscar nomination:")
+# print(rotten_after_nom)
 
 # WC for unigrams
 for rating in ["rotten", "fresh"]:
@@ -61,7 +63,7 @@ for rating in ["rotten", "fresh"]:
     wordCloud = WordCloud(max_words = WC_max_words, height = WC_height, width = WC_width)
     
     wordCloud.generate_from_frequencies(words_dict)
-    plt.figure(figsize=(20,8))
+    plt.figure(figsize=(10,8))
     plt.imshow(wordCloud)
     if rating == "rotten":
         state = "negative"
@@ -69,6 +71,7 @@ for rating in ["rotten", "fresh"]:
         state = "positive"
     plt.title('Word Cloud for ' + str(state) + ' reviews', fontsize = 30)
     plt.axis("off")
+    plt.savefig('assets/Word Cloud for ' + str(state) + ' reviews.png')
     plt.show()
 
 # WC for bigrams
@@ -86,7 +89,7 @@ for rating in ["rotten", "fresh"]:
     wordCloud = WordCloud(max_words = WC_max_words, height = WC_height, width = WC_width, colormap='Oranges')
     
     wordCloud.generate_from_frequencies(words_dict)
-    plt.figure(figsize=(20,8))
+    plt.figure(figsize=(10,8))
     plt.imshow(wordCloud)
     if rating == "rotten":
         state = "negative"
@@ -94,6 +97,7 @@ for rating in ["rotten", "fresh"]:
         state = "positive"
     plt.title('Word Cloud of bigrams for ' + str(state) + ' reviews', fontsize = 25)
     plt.axis("off")
+    plt.savefig('assets/Word Cloud of bigrams for ' + str(state) + ' reviews.png')
     plt.show()
 
 lemmatized_tokens = list(df['Lemmas'])
@@ -112,6 +116,7 @@ counts = [x[1] for x in most_occur]
 plt.barh(words, counts, color='skyblue')
 plt.title("Most common words")
 plt.gca().invert_yaxis()
+plt.savefig("assets/chart6.png")
 plt.show()
 
 plt.figure()
@@ -119,6 +124,37 @@ plt.hist(df['flesch reading ease'], bins = 10,  color='skyblue')
 plt.xlabel("flesch reading ease")
 plt.ylabel("frequency")
 plt.title("Distribution of flesch reading ease")
+plt.savefig("assets/chart7.png")
 plt.show()
 
+def calculate_polarity(text):
+    polarity = TextBlob(text).sentiment.polarity
+    if polarity > 0:
+        return 'Positive'
+    elif polarity < 0:
+        return 'Negative'
+    else:
+        return 'Neutral'
 
+df['Polarity'] = df['Review'].apply(calculate_polarity)
+polarity_counts = df['Polarity'].value_counts()
+
+comparison_df = df[['State', 'Polarity']].copy()
+
+comparison_df = comparison_df.replace({'State': {'rotten': 'Negative', 'fresh': 'Positive'}})
+comparison_df['Match'] = comparison_df['State'] == comparison_df['Polarity']
+
+value_counts = comparison_df['Match'].value_counts()
+
+plt.figure(figsize=(8, 6))
+value_counts.plot(kind='bar', color='skyblue')
+plt.title('How good TextBlob is matching polarity of reviews?', fontsize = 16)
+plt.xlabel('Match')
+plt.ylabel('Count')
+plt.xticks(rotation=0)
+plt.savefig("assets/chart8.png")
+plt.show()
+
+total_reviews = len(df['Review'])
+negative_reviews = df['State'].value_counts()['rotten']
+positive_reviews = df['State'].value_counts()['fresh']
